@@ -1,0 +1,36 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing and Hardhat
+/coverage
+/coverage.json
+/typechain
+/typechain-types
+/cache
+/artifacts
+
+# Production build outputs
+/.next/
+/out/
+/build
+/dist
+
+# Environment variables
+.env
+.env*.local
+!.env.example
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun.lock*
+pnpm-debug.log*
+
+# System and IDE files
+.DS_Store
+*.pem
+.vscode
+.idea

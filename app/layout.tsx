@@ -1,0 +1,41 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import { Web3Provider } from "@/components/providers/Web3Provider";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { Toaster } from "sonner";
+
+export const metadata: Metadata = {
+  title: "Lumen | Decentralized Digital Asset Marketplace",
+  description:
+    "A transparent, decentralized digital asset marketplace running on Ethereum Sepolia testnet with on-chain ownership history.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className="dark">
+      <body className="min-h-screen flex flex-col bg-background text-foreground antialiased">
+        <Web3Provider>
+          <Navbar />
+          <main className="flex-1 w-full">{children}</main>
+          <Footer />
+          <Toaster
+            theme="dark"
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: "#15181C",
+                border: "1px solid #22262B",
+                color: "#F2F3F4",
+              },
+            }}
+          />
+        </Web3Provider>
+      </body>
+    </html>
+  );
+}
