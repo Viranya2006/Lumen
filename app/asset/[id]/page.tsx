@@ -247,6 +247,7 @@ export default function AssetDetailPage() {
             name={asset.name}
             category={asset.category}
             imageUrl={asset.metadataURI}
+            isModalOpen={listModalOpen || transferModalOpen}
           />
           <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
             <span className="flex items-center gap-1">

@@ -12,6 +12,7 @@ interface Asset3DViewerProps {
   name: string;
   category: string;
   imageUrl?: string;
+  isModalOpen?: boolean;
 }
 
 function ThreeDCardGeometry({
@@ -65,14 +66,16 @@ function ThreeDCardGeometry({
           <meshStandardMaterial color="#15181C" metalness={0.9} roughness={0.2} />
         </mesh>
 
-        {/* Full Edge-to-Edge 3D Image (Zero gold background, zero margins) */}
+        {/* Full Edge-to-Edge 3D Image (Low zIndexRange to prevent modal clipping) */}
         <Html
           transform
           distanceFactor={3.5}
+          zIndexRange={[0, 1]}
           position={[0, 0, 0.005]}
           style={{
             width: `${cardWidth * 85}px`,
             height: `${cardHeight * 85}px`,
+            zIndex: 0,
           }}
           className="pointer-events-none select-none rounded-lg overflow-hidden shadow-2xl bg-transparent"
         >
@@ -94,40 +97,9 @@ function ThreeDCardGeometry({
   );
 }
 
-function TokenCylinderGeometry({ category }: { category: string }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const cat = (category || "").toLowerCase();
-
-  let primaryColor = "#D4A650";
-  if (cat.includes("collectible")) primaryColor = "#2DD4BF";
-  else if (cat.includes("domain")) primaryColor = "#818CF8";
-  else if (cat.includes("music")) primaryColor = "#E879F9";
-
-  useFrame((_, delta) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += delta * 0.4;
-    }
-  });
-
-  return (
-    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.6}>
-      <group>
-        <mesh ref={meshRef} castShadow receiveShadow>
-          <cylinderGeometry args={[2.2, 2.2, 0.25, 64]} />
-          <meshStandardMaterial color={primaryColor} metalness={0.85} roughness={0.2} />
-        </mesh>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[2.35, 0.06, 32, 64]} />
-          <meshStandardMaterial color="#FFFFFF" metalness={0.9} roughness={0.1} emissive={primaryColor} emissiveIntensity={0.2} />
-        </mesh>
-      </group>
-    </Float>
-  );
-}
-
 function CanvasLoader() {
   return (
-    <Html center>
+    <Html center zIndexRange={[0, 1]}>
       <div className="flex items-center gap-2 text-xs text-muted-foreground bg-surface/90 px-3 py-1.5 rounded-full border border-surface-border backdrop-blur-sm">
         <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
         <span>Loading 3D Canvas...</span>
@@ -141,6 +113,7 @@ export function Asset3DViewer({
   name,
   category,
   imageUrl,
+  isModalOpen = false,
 }: Asset3DViewerProps) {
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const [webGLSupported, setWebGLSupported] = useState<boolean>(true);
@@ -173,8 +146,11 @@ export function Asset3DViewer({
     );
   }
 
+  // Switch to clean 2D view while modal dialog is open to prevent 3D CSS matrix overlap over backdrop
+  const show2D = viewMode === "2d" || !webGLSupported || isModalOpen;
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 relative z-0">
       {/* Mode Switcher Buttons */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-1.5 p-1 rounded-lg bg-surface border border-surface-border text-xs">
@@ -204,8 +180,8 @@ export function Asset3DViewer({
       </div>
 
       {/* Preview Display Container */}
-      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-gradient-to-b from-[#13161A] to-[#0B0D10] border border-surface-border group shadow-2xl">
-        {viewMode === "2d" || !webGLSupported ? (
+      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-gradient-to-b from-[#13161A] to-[#0B0D10] border border-surface-border group shadow-2xl z-0">
+        {show2D ? (
           <div className="w-full h-full relative bg-surface-subtle overflow-hidden flex items-center justify-center">
             {hasValidImage ? (
               <img
@@ -226,6 +202,7 @@ export function Asset3DViewer({
               camera={{ position: [0, 0, 6.5], fov: 45 }}
               gl={{ antialias: true, alpha: true }}
               dpr={[1, 2]}
+              style={{ position: "relative", zIndex: 0 }}
             >
               <ambientLight intensity={0.9} />
               <directionalLight position={[5, 8, 5]} intensity={1.6} color="#FFF5EA" />
