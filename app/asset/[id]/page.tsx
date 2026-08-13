@@ -24,7 +24,7 @@ import { TransferAssetModal } from "@/components/modals/TransferAssetModal";
 import { AddressBadge } from "@/components/common/AddressBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatEth, formatDate, formatRelativeTime, getCategoryBadgeStyle } from "@/lib/utils";
+import { formatEth, formatDate, formatRelativeTime, getCategoryBadgeStyle, formatWeb3ErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -429,7 +429,7 @@ export default function AssetDetailPage() {
               {writeError && (
                 <div className="p-3 rounded-lg bg-danger/10 border border-danger/30 text-danger text-xs flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span className="break-all">{writeError.message}</span>
+                  <span>{formatWeb3ErrorMessage(writeError)}</span>
                 </div>
               )}
             </div>

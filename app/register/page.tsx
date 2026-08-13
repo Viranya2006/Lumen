@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { LumenMarketplaceABI, CONTRACT_ADDRESS } from "@/lib/contract";
-import { parseEthToWei } from "@/lib/utils";
+import { parseEthToWei, formatWeb3ErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -244,8 +244,8 @@ export default function RegisterAssetPage() {
               {writeError && (
                 <div className="p-3.5 rounded-lg bg-danger/10 border border-danger/30 text-danger text-xs flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span className="break-all">
-                    {writeError.message || "Transaction was rejected or failed."}
+                  <span>
+                    {formatWeb3ErrorMessage(writeError)}
                   </span>
                 </div>
               )}

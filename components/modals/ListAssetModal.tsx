@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { parseEthToWei, formatEth } from "@/lib/utils";
+import { parseEthToWei, formatEth, formatWeb3ErrorMessage } from "@/lib/utils";
 import type { Asset } from "@/lib/contract";
 import { Loader2, Tag } from "lucide-react";
 
@@ -48,7 +48,7 @@ export function ListAssetModal({
       onOpenChange(false);
       setPriceEth("");
     } catch (err: any) {
-      setError(err?.message || "Failed to list asset");
+      setError(formatWeb3ErrorMessage(err));
     }
   };
 

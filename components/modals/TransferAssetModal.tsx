@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isAddress } from "viem";
+import { formatWeb3ErrorMessage } from "@/lib/utils";
 import type { Asset } from "@/lib/contract";
 import { Loader2, Send } from "lucide-react";
 
@@ -53,7 +54,7 @@ export function TransferAssetModal({
       onOpenChange(false);
       setRecipient("");
     } catch (err: any) {
-      setError(err?.message || "Failed to transfer asset");
+      setError(formatWeb3ErrorMessage(err));
     }
   };
 

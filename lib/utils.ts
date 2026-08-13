@@ -7,6 +7,58 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Formats messy raw Web3/Viem error objects into clean, human-readable UI messages
+ */
+export function formatWeb3ErrorMessage(error: any): string {
+  if (!error) return "An unexpected error occurred.";
+
+  const msg =
+    typeof error === "string"
+      ? error
+      : error?.shortMessage || error?.details || error?.message || "";
+
+  // User rejected or denied signature in MetaMask
+  if (
+    msg.includes("User rejected") ||
+    msg.includes("User denied") ||
+    msg.includes("user rejected") ||
+    msg.includes("user denied") ||
+    msg.includes("rejected the request") ||
+    msg.includes("ACTION_REJECTED")
+  ) {
+    return "Transaction cancelled: You denied the signature request in MetaMask.";
+  }
+
+  // Insufficient funds
+  if (msg.includes("insufficient funds") || msg.includes("exceeds balance")) {
+    return "Insufficient ETH balance in your wallet to cover gas and transaction amount.";
+  }
+
+  // Execution reverted by smart contract
+  if (msg.includes("execution reverted") || msg.includes("revert")) {
+    const match =
+      msg.match(/execution reverted: ([^"\n]+)/i) ||
+      msg.match(/revert ([^"\n]+)/i);
+    if (match && match[1]) {
+      return `Contract Reverted: ${match[1].trim()}`;
+    }
+    return "Transaction was reverted by the smart contract rules.";
+  }
+
+  // General fallback - clean out Viem URLs, hex arguments & technical traces
+  let cleanMsg = msg
+    .split("Request Arguments:")[0]
+    .split("Contract Call:")[0]
+    .split("Version:")[0]
+    .split("Docs:")[0]
+    .trim();
+
+  if (cleanMsg.endsWith(".")) cleanMsg = cleanMsg.slice(0, -1);
+
+  return cleanMsg || "Transaction request failed. Please try again.";
+}
+
+/**
  * Shortens an Ethereum address to 0x1234...abcd format
  */
 export function shortenAddress(address?: string, chars = 4): string {
