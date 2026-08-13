@@ -20,7 +20,7 @@ async function main() {
   console.log(`LumenMarketplace deployed successfully to: ${contractAddress}`);
 
   // Export deployment info and ABI to lib/contract/
-  const artifactDir = path.join(__dirname, "../lib/contract");
+  const artifactDir = path.join(process.cwd(), "lib/contract");
   if (!fs.existsSync(artifactDir)) {
     fs.mkdirSync(artifactDir, { recursive: true });
   }
