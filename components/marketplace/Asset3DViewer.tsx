@@ -28,13 +28,6 @@ function ThreeDCardGeometry({
   const meshRef = useRef<THREE.Group>(null);
   const [aspectRatio, setAspectRatio] = useState<number>(0.85);
 
-  const cat = (category || "").toLowerCase();
-  let borderColor = "#D4A650"; // Gold
-  if (cat.includes("collectible")) borderColor = "#2DD4BF";
-  else if (cat.includes("domain")) borderColor = "#818CF8";
-  else if (cat.includes("music")) borderColor = "#E879F9";
-  else if (cat.includes("photography")) borderColor = "#FBBF24";
-
   // Calculate dynamic image aspect ratio
   useEffect(() => {
     if (!imageUrl) return;
@@ -47,8 +40,8 @@ function ThreeDCardGeometry({
     };
   }, [imageUrl]);
 
-  const cardHeight = 4.2;
-  const cardWidth = Math.max(2.4, Math.min(5.2, cardHeight * aspectRatio));
+  const cardHeight = 4.4;
+  const cardWidth = Math.max(2.0, Math.min(5.5, cardHeight * aspectRatio));
 
   useFrame((_, delta) => {
     if (meshRef.current) {
@@ -66,34 +59,28 @@ function ThreeDCardGeometry({
   return (
     <Float speed={2} rotationIntensity={0.4} floatIntensity={0.5}>
       <group ref={meshRef}>
-        {/* Main 3D Metallic Card Frame Box (Scaled dynamically) */}
-        <mesh castShadow receiveShadow position={[0, 0, 0]}>
-          <boxGeometry args={[cardWidth, cardHeight, 0.14]} />
-          <meshStandardMaterial color={borderColor} metalness={0.9} roughness={0.15} />
+        {/* Sleek 3D Slab Backing (Exact flush backing, zero margin) */}
+        <mesh position={[0, 0, -0.03]}>
+          <boxGeometry args={[cardWidth, cardHeight, 0.06]} />
+          <meshStandardMaterial color="#15181C" metalness={0.9} roughness={0.2} />
         </mesh>
 
-        {/* Outer Metallic Bevel Frame */}
-        <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[cardWidth + 0.12, cardHeight + 0.12, 0.07]} />
-          <meshStandardMaterial color={borderColor} metalness={0.95} roughness={0.12} />
-        </mesh>
-
-        {/* Front Face: Dynamic 3D HTML Image matching the card bounds 100% */}
+        {/* Full Edge-to-Edge 3D Image (Zero gold background, zero margins) */}
         <Html
           transform
           distanceFactor={3.5}
-          position={[0, 0, 0.075]}
+          position={[0, 0, 0.005]}
           style={{
-            width: `${cardWidth * 78}px`,
-            height: `${cardHeight * 78}px`,
+            width: `${cardWidth * 85}px`,
+            height: `${cardHeight * 85}px`,
           }}
-          className="pointer-events-none select-none rounded-sm overflow-hidden shadow-2xl bg-[#15181C]"
+          className="pointer-events-none select-none rounded-lg overflow-hidden shadow-2xl bg-transparent"
         >
           {hasValidImage ? (
             <img
               src={imageUrl}
               alt={name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover rounded-lg"
               onError={(e) => {
                 (e.currentTarget as HTMLElement).style.display = "none";
               }}
@@ -102,12 +89,6 @@ function ThreeDCardGeometry({
             <AssetPlaceholder category={category} name={name} assetId={assetId} />
           )}
         </Html>
-
-        {/* Back Face: Sleek Dark Metallic Emblem */}
-        <mesh position={[0, 0, -0.075]} rotation={[0, Math.PI, 0]}>
-          <planeGeometry args={[cardWidth - 0.05, cardHeight - 0.05]} />
-          <meshStandardMaterial color="#0B0D10" metalness={0.95} roughness={0.1} />
-        </mesh>
       </group>
     </Float>
   );
