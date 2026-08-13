@@ -1,7 +1,17 @@
 import { getApiDocs } from "@/lib/swagger";
-import SwaggerClient from "@/components/docs/SwaggerClient";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Code2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Code2, Loader2 } from "lucide-react";
+
+const SwaggerClient = dynamic(() => import("@/components/docs/SwaggerClient"), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[400px] flex flex-col items-center justify-center text-muted-foreground gap-3 bg-surface border border-surface-border rounded-xl">
+      <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      <p className="text-sm font-medium">Loading OpenAPI Interactive Swagger Console...</p>
+    </div>
+  ),
+});
 
 export const metadata = {
   title: "API Documentation | Lumen Marketplace",
@@ -18,6 +28,7 @@ export default function ApiDocsPage() {
           <div className="flex items-center gap-2 mb-2">
             <Link
               href="/"
+              prefetch={false}
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Marketplace

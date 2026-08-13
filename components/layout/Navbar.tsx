@@ -13,7 +13,6 @@ import {
   FileCode2,
   Menu,
   X,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +33,7 @@ export function Navbar() {
     <header className="sticky top-0 z-40 w-full border-b border-surface-border bg-background/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand / Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
+        <Link href="/" prefetch={false} className="flex items-center gap-2.5 group">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-[#996C24] flex items-center justify-center text-[#0B0D10] font-black text-lg shadow-sm shadow-accent/20 group-hover:scale-105 transition-transform">
             ✦
           </div>
@@ -48,7 +47,7 @@ export function Navbar() {
           </div>
         </Link>
 
-        {/* Desktop Navigation Links */}
+        {/* Desktop Navigation Links (prefetch disabled to prevent network thrashing) */}
         <nav className="hidden md:flex items-center gap-1 bg-surface/60 border border-surface-border rounded-full px-3 py-1">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -61,6 +60,7 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150",
                   isActive
@@ -111,6 +111,7 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",

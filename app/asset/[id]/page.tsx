@@ -6,7 +6,19 @@ import Link from "next/link";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { LumenMarketplaceABI, CONTRACT_ADDRESS, type Asset, type OwnershipRecord } from "@/lib/contract";
-import { Asset3DViewer } from "@/components/marketplace/Asset3DViewer";
+import dynamic from "next/dynamic";
+
+const Asset3DViewer = dynamic(
+  () => import("@/components/marketplace/Asset3DViewer").then((mod) => mod.Asset3DViewer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-surface flex items-center justify-center border border-surface-border">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    ),
+  }
+);
 import { ListAssetModal } from "@/components/modals/ListAssetModal";
 import { TransferAssetModal } from "@/components/modals/TransferAssetModal";
 import { AddressBadge } from "@/components/common/AddressBadge";
