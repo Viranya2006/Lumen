@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { publicClient, CONTRACT_ADDRESS, LumenMarketplaceABI } from "@/lib/contract";
 import { formatEth } from "@/lib/utils";
+import { getCached, setCached } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -19,22 +20,22 @@ export const dynamic = "force-dynamic";
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Asset'
- *       500:
- *         description: Error querying blockchain data
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
+  const cacheKey = "all_assets";
+  const cached = getCached<any[]>(cacheKey);
+  if (cached) {
+    return NextResponse.json(cached);
+  }
+
   try {
     const rawAssets = (await publicClient.readContract({
       address: CONTRACT_ADDRESS,
       abi: LumenMarketplaceABI,
       functionName: "getAllAssets",
-    })) as any[];
+    }).catch(() => [])) as any[];
 
-    const formattedAssets = rawAssets.map((asset) => ({
+    const formattedAssets = (rawAssets || []).map((asset) => ({
       assetId: Number(asset.assetId),
       name: asset.name,
       description: asset.description,
@@ -48,12 +49,11 @@ export async function GET() {
       metadataURI: asset.metadataURI || "",
     }));
 
+    setCached(cacheKey, formattedAssets, 15);
+
     return NextResponse.json(formattedAssets);
   } catch (error: any) {
     console.error("Error in GET /api/assets:", error);
-    return NextResponse.json(
-      { error: error?.message || "Failed to fetch assets from blockchain" },
-      { status: 500 }
-    );
+    return NextResponse.json([]);
   }
 }

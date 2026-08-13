@@ -52,19 +52,42 @@ export function getPublicTransport() {
   const transports = [];
 
   if (alchemyKey) {
-    transports.push(http(`https://eth-sepolia.g.alchemy.com/v2/${alchemyKey}`));
+    transports.push(
+      http(`https://eth-sepolia.g.alchemy.com/v2/${alchemyKey}`, {
+        timeout: 4000,
+        retryCount: 2,
+      })
+    );
   }
 
-  transports.push(http("https://ethereum-sepolia-rpc.publicnode.com"));
-  transports.push(http("https://sepolia.drpc.org"));
-  transports.push(http("https://1rpc.io/sepolia"));
+  transports.push(
+    http("https://ethereum-sepolia-rpc.publicnode.com", {
+      timeout: 3500,
+      retryCount: 1,
+    })
+  );
+  transports.push(
+    http("https://sepolia.drpc.org", {
+      timeout: 3500,
+      retryCount: 1,
+    })
+  );
+  transports.push(
+    http("https://1rpc.io/sepolia", {
+      timeout: 3500,
+      retryCount: 1,
+    })
+  );
 
-  return fallback(transports);
+  return fallback(transports, { rank: false });
 }
 
 export const publicClient = createPublicClient({
   chain: sepolia,
   transport: getPublicTransport(),
+  batch: {
+    multicall: true,
+  },
 });
 
 export { LumenMarketplaceABI };

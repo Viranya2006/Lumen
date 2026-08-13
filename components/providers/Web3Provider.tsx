@@ -22,7 +22,10 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             refetchOnWindowFocus: false,
-            staleTime: 5000,
+            refetchOnMount: false,
+            refetchOnReconnect: false,
+            staleTime: 30 * 1000, // 30 seconds client-side cache
+            gcTime: 10 * 60 * 1000,
           },
         },
       })

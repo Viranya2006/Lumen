@@ -2,8 +2,18 @@ import { NextResponse } from "next/server";
 import { publicClient, CONTRACT_ADDRESS, LumenMarketplaceABI, type ActivityEvent } from "@/lib/contract";
 import { formatEth } from "@/lib/utils";
 import { formatEther } from "viem";
+import { getCached, setCached } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
+
+const DEFAULT_DASHBOARD = {
+  totalAssets: 0,
+  totalTransactions: 0,
+  totalUniqueHolders: 0,
+  totalVolumeEth: "0.00",
+  topHolders: [],
+  recentActivity: [],
+};
 
 /**
  * @swagger
@@ -18,54 +28,54 @@ export const dynamic = "force-dynamic";
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/DashboardResponse'
- *       500:
- *         description: Error querying platform stats
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
+  const cacheKey = "dashboard_stats";
+  const cached = getCached<any>(cacheKey);
+  if (cached) {
+    return NextResponse.json(cached);
+  }
+
   try {
     const [rawAssets, totalAssetsBN, totalTxsBN] = await Promise.all([
       publicClient.readContract({
         address: CONTRACT_ADDRESS,
         abi: LumenMarketplaceABI,
         functionName: "getAllAssets",
-      }) as Promise<any[]>,
+      }).catch(() => [] as any[]),
       publicClient.readContract({
         address: CONTRACT_ADDRESS,
         abi: LumenMarketplaceABI,
         functionName: "getTotalAssets",
-      }) as Promise<bigint>,
+      }).catch(() => 0n),
       publicClient.readContract({
         address: CONTRACT_ADDRESS,
         abi: LumenMarketplaceABI,
         functionName: "getTotalTransactions",
-      }) as Promise<bigint>,
+      }).catch(() => 0n),
     ]);
 
     const totalAssets = Number(totalAssetsBN || 0n);
     const totalTransactions = Number(totalTxsBN || 0n);
 
-    // Calculate holders map and total volume from ownership histories
+    if (!rawAssets || rawAssets.length === 0) {
+      setCached(cacheKey, DEFAULT_DASHBOARD, 15);
+      return NextResponse.json(DEFAULT_DASHBOARD);
+    }
+
     const holderMap: Record<string, number> = {};
-    const assetMap: Record<number, string> = {};
     let totalVolumeWei = 0n;
     const allActivities: ActivityEvent[] = [];
 
-    // Process all assets and fetch their ownership histories to calculate volume and activities
     const historyPromises = rawAssets.map(async (asset) => {
       const assetId = Number(asset.assetId);
       const name = asset.name;
       const owner = asset.currentOwner;
-      assetMap[assetId] = name;
 
       if (owner && owner !== "0x0000000000000000000000000000000000000000") {
         holderMap[owner] = (holderMap[owner] || 0) + 1;
       }
 
-      // Initial registration activity
       allActivities.push({
         type: "AssetRegistered",
         assetId,
@@ -126,14 +136,13 @@ export async function GET() {
             }
           }
         }
-      } catch (err) {
-        // Individual history fetch fallback
+      } catch {
+        // Fallback
       }
     });
 
     await Promise.all(historyPromises);
 
-    // Compute top 10 holders
     const topHolders = Object.entries(holderMap)
       .map(([address, assetCount]) => ({ address, assetCount }))
       .sort((a, b) => b.assetCount - a.assetCount)
@@ -141,25 +150,25 @@ export async function GET() {
 
     const totalUniqueHolders = Object.keys(holderMap).length;
 
-    // Sort recent activities by timestamp descending
     allActivities.sort((a, b) => b.timestamp - a.timestamp);
     const recentActivity = allActivities.slice(0, 10);
 
     const totalVolumeEth = parseFloat(formatEther(totalVolumeWei)).toFixed(4);
 
-    return NextResponse.json({
+    const result = {
       totalAssets,
       totalTransactions,
       totalUniqueHolders,
       totalVolumeEth,
       topHolders,
       recentActivity,
-    });
+    };
+
+    setCached(cacheKey, result, 20);
+
+    return NextResponse.json(result);
   } catch (error: any) {
     console.error("Error in GET /api/dashboard:", error);
-    return NextResponse.json(
-      { error: error?.message || "Failed to aggregate dashboard analytics" },
-      { status: 500 }
-    );
+    return NextResponse.json(DEFAULT_DASHBOARD);
   }
 }

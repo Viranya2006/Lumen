@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { publicClient, CONTRACT_ADDRESS, LumenMarketplaceABI, type ActivityEvent } from "@/lib/contract";
 import { formatEth } from "@/lib/utils";
 import { formatEther } from "viem";
+import { getCached, setCached } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -36,33 +37,32 @@ export const dynamic = "force-dynamic";
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ActivityResponse'
- *       500:
- *         description: Error querying activity logs
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
-    const filterType = searchParams.get("type");
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
+  const filterType = searchParams.get("type");
 
+  const cacheKey = `activity_${page}_${limit}_${filterType || "all"}`;
+  const cached = getCached<any>(cacheKey);
+  if (cached) {
+    return NextResponse.json(cached);
+  }
+
+  try {
     const rawAssets = (await publicClient.readContract({
       address: CONTRACT_ADDRESS,
       abi: LumenMarketplaceABI,
       functionName: "getAllAssets",
-    })) as any[];
+    }).catch(() => [])) as any[];
 
     const allActivities: ActivityEvent[] = [];
 
-    const historyPromises = rawAssets.map(async (asset) => {
+    const historyPromises = (rawAssets || []).map(async (asset) => {
       const assetId = Number(asset.assetId);
       const name = asset.name;
 
-      // Registration event
       allActivities.push({
         type: "AssetRegistered",
         assetId,
@@ -122,14 +122,13 @@ export async function GET(request: NextRequest) {
             }
           }
         }
-      } catch (err) {
+      } catch {
         // Continue
       }
     });
 
     await Promise.all(historyPromises);
 
-    // Apply type filter if provided
     let filtered = allActivities;
     if (filterType && filterType !== "all") {
       filtered = filtered.filter(
@@ -137,7 +136,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Sort descending by timestamp
     filtered.sort((a, b) => b.timestamp - a.timestamp);
 
     const total = filtered.length;
@@ -145,18 +143,25 @@ export async function GET(request: NextRequest) {
     const startIndex = (page - 1) * limit;
     const paginatedEvents = filtered.slice(startIndex, startIndex + limit);
 
-    return NextResponse.json({
+    const result = {
       events: paginatedEvents,
       total,
       page,
       limit,
       totalPages,
-    });
+    };
+
+    setCached(cacheKey, result, 20);
+
+    return NextResponse.json(result);
   } catch (error: any) {
     console.error("Error in GET /api/activity:", error);
-    return NextResponse.json(
-      { error: error?.message || "Failed to fetch activity logs from blockchain" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      events: [],
+      total: 0,
+      page,
+      limit,
+      totalPages: 1,
+    });
   }
 }
