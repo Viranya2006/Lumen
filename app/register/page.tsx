@@ -15,12 +15,10 @@ import { toast } from "sonner";
 import {
   PlusCircle,
   Sparkles,
-  Image as ImageIcon,
   Wallet,
   Loader2,
   CheckCircle2,
   AlertCircle,
-  ArrowRight,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -35,7 +33,7 @@ const CATEGORIES = [
 
 export default function RegisterAssetPage() {
   const router = useRouter();
-  const { address, isConnected, chainId } = useAccount();
+  const { address, isConnected } = useAccount();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -48,31 +46,26 @@ export default function RegisterAssetPage() {
     data: txHash,
     isPending: isSignPending,
     error: writeError,
-    reset: resetWrite,
   } = useWriteContract();
 
   const {
     isLoading: isConfirming,
     isSuccess: isConfirmed,
     data: receipt,
-    error: receiptError,
   } = useWaitForTransactionReceipt({
     hash: txHash,
   });
 
   const isSubmitting = isSignPending || isConfirming;
 
-  // Handle successful registration
+  // Handle successful registration & immediate redirect
   useEffect(() => {
     if (isConfirmed && receipt) {
-      toast.success("Asset registered and minted successfully on Sepolia!");
-      // Check logs for minted assetId or redirect to marketplace/my-assets
-      const timer = setTimeout(() => {
-        router.push("/my-assets");
-      }, 2000);
-      return () => clearTimeout(timer);
+      toast.success("Asset minted and registered on Sepolia testnet!");
+      // Redirect to My Assets collection immediately
+      window.location.href = "/my-assets";
     }
-  }, [isConfirmed, receipt, router]);
+  }, [isConfirmed, receipt]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,8 +111,7 @@ export default function RegisterAssetPage() {
         </h1>
         <p className="text-sm text-muted-foreground max-w-2xl">
           Define your asset metadata and mint an authentic ERC-721 token
-          directly to your wallet. You can optionally list it for sale
-          immediately.
+          directly to your wallet on Ethereum Sepolia.
         </p>
       </div>
 
@@ -235,7 +227,7 @@ export default function RegisterAssetPage() {
                 <div className="p-3.5 rounded-lg bg-teal/10 border border-teal/30 text-teal text-xs flex items-center gap-2.5">
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                   <span>
-                    Transaction submitted! Confirming block on Sepolia testnet...
+                    Transaction submitted! Confirming block on Sepolia testnet (~12s)...
                   </span>
                 </div>
               )}
@@ -244,7 +236,7 @@ export default function RegisterAssetPage() {
                 <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2.5">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>
-                    Asset minted successfully! Redirecting to collection...
+                    Asset minted successfully! Opening collection...
                   </span>
                 </div>
               )}

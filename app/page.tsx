@@ -44,6 +44,10 @@ export default function MarketplacePage() {
     address: CONTRACT_ADDRESS,
     abi: LumenMarketplaceABI,
     functionName: "getAllAssets",
+    query: {
+      refetchOnMount: true,
+      staleTime: 0,
+    },
   });
 
   const assets: Asset[] = useMemo(() => {

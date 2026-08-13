@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { publicClient, CONTRACT_ADDRESS, LumenMarketplaceABI, type ActivityEvent } from "@/lib/contract";
 import { formatEth } from "@/lib/utils";
 import { formatEther } from "viem";
-import { getCached, setCached } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -30,12 +29,6 @@ const DEFAULT_DASHBOARD = {
  *               $ref: '#/components/schemas/DashboardResponse'
  */
 export async function GET() {
-  const cacheKey = "dashboard_stats";
-  const cached = getCached<any>(cacheKey);
-  if (cached) {
-    return NextResponse.json(cached);
-  }
-
   try {
     const [rawAssets, totalAssetsBN, totalTxsBN] = await Promise.all([
       publicClient.readContract({
@@ -59,7 +52,6 @@ export async function GET() {
     const totalTransactions = Number(totalTxsBN || 0n);
 
     if (!rawAssets || rawAssets.length === 0) {
-      setCached(cacheKey, DEFAULT_DASHBOARD, 15);
       return NextResponse.json(DEFAULT_DASHBOARD);
     }
 
@@ -155,18 +147,14 @@ export async function GET() {
 
     const totalVolumeEth = parseFloat(formatEther(totalVolumeWei)).toFixed(4);
 
-    const result = {
+    return NextResponse.json({
       totalAssets,
       totalTransactions,
       totalUniqueHolders,
       totalVolumeEth,
       topHolders,
       recentActivity,
-    };
-
-    setCached(cacheKey, result, 20);
-
-    return NextResponse.json(result);
+    });
   } catch (error: any) {
     console.error("Error in GET /api/dashboard:", error);
     return NextResponse.json(DEFAULT_DASHBOARD);

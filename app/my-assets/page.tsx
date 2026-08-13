@@ -40,6 +40,8 @@ export default function MyAssetsPage() {
     args: address ? [address] : undefined,
     query: {
       enabled: Boolean(isConnected && address),
+      refetchOnMount: true,
+      staleTime: 0,
     },
   });
 

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { publicClient, CONTRACT_ADDRESS, LumenMarketplaceABI } from "@/lib/contract";
 import { formatEth } from "@/lib/utils";
-import { getCached, setCached } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -22,12 +21,6 @@ export const dynamic = "force-dynamic";
  *                 $ref: '#/components/schemas/Asset'
  */
 export async function GET() {
-  const cacheKey = "all_assets";
-  const cached = getCached<any[]>(cacheKey);
-  if (cached) {
-    return NextResponse.json(cached);
-  }
-
   try {
     const rawAssets = (await publicClient.readContract({
       address: CONTRACT_ADDRESS,
@@ -48,8 +41,6 @@ export async function GET() {
       createdAt: Number(asset.createdAt),
       metadataURI: asset.metadataURI || "",
     }));
-
-    setCached(cacheKey, formattedAssets, 15);
 
     return NextResponse.json(formattedAssets);
   } catch (error: any) {
