@@ -3,6 +3,7 @@ import "./globals.css";
 import { Web3Provider } from "@/components/providers/Web3Provider";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
@@ -30,11 +31,14 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-background text-foreground antialiased">
+      <body className="min-h-screen flex flex-col bg-background text-foreground antialiased relative">
         <Web3Provider>
-          <Navbar />
-          <main className="flex-1 w-full">{children}</main>
-          <Footer />
+          <AnimatedBackground />
+          <div className="relative z-10 flex-1 flex flex-col w-full">
+            <Navbar />
+            <main className="flex-1 w-full">{children}</main>
+            <Footer />
+          </div>
           <Toaster
             theme="dark"
             position="bottom-right"
