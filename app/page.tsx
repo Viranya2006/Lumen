@@ -81,7 +81,7 @@ export default function MarketplacePage() {
     return {
       total,
       forSaleCount,
-      floorPriceEth: floorPrice > 0n ? formatEth(floorPrice) : "0",
+      floorPriceEth: floorPrice > 0n ? `${formatEth(floorPrice)} ETH` : "—",
     };
   }, [assets]);
 
@@ -178,7 +178,7 @@ export default function MarketplacePage() {
           <div>
             <span className="text-xs text-muted-foreground block">Floor Price</span>
             <span className="text-xl font-bold font-mono text-teal">
-              {stats.floorPriceEth} ETH
+              {stats.floorPriceEth}
             </span>
           </div>
           <div>
