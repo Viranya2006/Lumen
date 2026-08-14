@@ -36,7 +36,7 @@ const CATEGORIES = [
 export default function MarketplacePage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"recent" | "price-asc" | "price-desc">("recent");
+  const [sortBy, setSortBy] = useState<"oldest" | "recent" | "price-asc" | "price-desc">("oldest");
   const [forSaleOnly, setForSaleOnly] = useState(false);
 
   // Read all assets live from smart contract
@@ -114,9 +114,11 @@ export default function MarketplacePage() {
       result.sort((a, b) => (a.price < b.price ? -1 : a.price > b.price ? 1 : 0));
     } else if (sortBy === "price-desc") {
       result.sort((a, b) => (a.price > b.price ? -1 : a.price < b.price ? 1 : 0));
+    } else if (sortBy === "recent") {
+      result.sort((a, b) => b.createdAt - a.createdAt || b.assetId - a.assetId);
     } else {
-      // Recent first
-      result.sort((a, b) => b.createdAt - a.createdAt);
+      // "oldest" (First Created) - Default
+      result.sort((a, b) => a.createdAt - b.createdAt || a.assetId - b.assetId);
     }
 
     return result;
@@ -225,6 +227,9 @@ export default function MarketplacePage() {
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className="bg-transparent text-foreground focus:outline-none cursor-pointer"
               >
+                <option value="oldest" className="bg-[#15181C] text-foreground">
+                  First Created
+                </option>
                 <option value="recent" className="bg-[#15181C] text-foreground">
                   Recently Created
                 </option>
