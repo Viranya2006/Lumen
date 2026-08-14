@@ -6,6 +6,8 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagm
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { LumenMarketplaceABI, CONTRACT_ADDRESS } from "@/lib/contract";
 import { parseEthToWei, formatWeb3ErrorMessage } from "@/lib/utils";
+import { encodeMetadataURI, type MusicTrackResult } from "@/lib/music";
+import { AudioPlayer } from "@/components/marketplace/AudioPlayer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +21,9 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Music,
+  Search,
+  Check,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -40,6 +45,13 @@ export default function RegisterAssetPage() {
   const [category, setCategory] = useState("Art");
   const [priceEth, setPriceEth] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [audioUrl, setAudioUrl] = useState("");
+
+  // Music search state
+  const [musicQuery, setMusicQuery] = useState("");
+  const [musicResults, setMusicResults] = useState<MusicTrackResult[]>([]);
+  const [isSearchingMusic, setIsSearchingMusic] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<MusicTrackResult | null>(null);
 
   const {
     writeContract,
@@ -58,11 +70,54 @@ export default function RegisterAssetPage() {
 
   const isSubmitting = isSignPending || isConfirming;
 
+  // Handle iTunes Music search
+  useEffect(() => {
+    if (category !== "Music" || !musicQuery.trim()) {
+      setMusicResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setIsSearchingMusic(true);
+        const res = await fetch(
+          `/api/music-search?q=${encodeURIComponent(musicQuery.trim())}`
+        );
+        if (res.ok) {
+          const json = await res.json();
+          setMusicResults(json.results || []);
+        }
+      } catch (err) {
+        console.error("Music search error:", err);
+      } finally {
+        setIsSearchingMusic(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [musicQuery, category]);
+
+  // Handle selecting a music track from search results
+  const handleSelectTrack = (track: MusicTrackResult) => {
+    setSelectedTrack(track);
+    setName(track.trackName);
+    setDescription(
+      `Official Track by ${track.artistName}. Album: ${track.collectionName || "Single"}. Genre: ${track.genre}.`
+    );
+    if (track.artworkUrl) {
+      setImageUrl(track.artworkUrl);
+    }
+    if (track.previewUrl) {
+      setAudioUrl(track.previewUrl);
+    }
+    setMusicResults([]);
+    toast.success(`Selected "${track.trackName}" by ${track.artistName}`);
+  };
+
   // Handle successful registration & immediate redirect
   useEffect(() => {
     if (isConfirmed && receipt) {
       toast.success("Asset minted and registered on Sepolia testnet!");
-      // Redirect to My Assets collection immediately
       window.location.href = "/my-assets";
     }
   }, [isConfirmed, receipt]);
@@ -80,7 +135,11 @@ export default function RegisterAssetPage() {
     }
 
     try {
-      const priceWei = priceEth && parseFloat(priceEth) > 0 ? parseEthToWei(priceEth) : 0n;
+      const priceWei =
+        priceEth && parseFloat(priceEth) > 0 ? parseEthToWei(priceEth) : 0n;
+
+      // Encode image URL + optional audio preview URL into metadataURI
+      const finalMetadataURI = encodeMetadataURI(imageUrl, audioUrl);
 
       writeContract({
         address: CONTRACT_ADDRESS,
@@ -91,7 +150,7 @@ export default function RegisterAssetPage() {
           description.trim(),
           category,
           priceWei,
-          imageUrl.trim(),
+          finalMetadataURI,
         ],
       });
     } catch (err: any) {
@@ -134,6 +193,93 @@ export default function RegisterAssetPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Category Selection */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground block">
+                  Category <span className="text-danger">*</span>
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface text-sm text-foreground focus:outline-none focus:border-accent transition-colors cursor-pointer"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c} className="bg-[#15181C] text-foreground">
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Music Search Autocomplete (Visible only when Category === "Music") */}
+              {category === "Music" && (
+                <div className="p-4 rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/5 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-fuchsia-400">
+                    <Music className="w-4 h-4" />
+                    <span> Music Search by iTunes Public API</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Type a song or artist to auto-fill cover art & 30-second audio preview. No upload required!
+                  </p>
+
+                  <div className="relative">
+                    <div className="relative flex items-center">
+                      <Search className="w-4 h-4 absolute left-3 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Search e.g. Starboy, Blinding Lights, Cyberpunk..."
+                        value={musicQuery}
+                        onChange={(e) => setMusicQuery(e.target.value)}
+                        className="pl-9 pr-8"
+                        disabled={isSubmitting}
+                      />
+                      {isSearchingMusic && (
+                        <Loader2 className="w-4 h-4 absolute right-3 animate-spin text-fuchsia-400" />
+                      )}
+                    </div>
+
+                    {/* Results Dropdown */}
+                    {musicResults.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-[#15181C] border border-surface-border rounded-lg shadow-2xl overflow-hidden divide-y divide-surface-border max-h-60 overflow-y-auto">
+                        {musicResults.map((track) => (
+                          <button
+                            key={track.id}
+                            type="button"
+                            onClick={() => handleSelectTrack(track)}
+                            className="w-full p-2.5 flex items-center gap-3 text-left hover:bg-surface-hover transition-colors cursor-pointer group"
+                          >
+                            <img
+                              src={track.artworkUrl}
+                              alt={track.trackName}
+                              className="w-9 h-9 rounded object-cover border border-surface-border shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-foreground truncate group-hover:text-accent">
+                                {track.trackName}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground truncate">
+                                {track.artistName} • {track.collectionName || "Single"}
+                              </p>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] shrink-0">
+                              30s Preview
+                            </Badge>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedTrack && (
+                    <div className="flex items-center gap-2 text-xs text-teal bg-teal/10 p-2 rounded-lg border border-teal/20">
+                      <Check className="w-4 h-4" />
+                      <span>Loaded track &quot;{selectedTrack.trackName}&quot; with 30s audio sample</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Asset Name */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground flex items-center justify-between">
@@ -157,37 +303,18 @@ export default function RegisterAssetPage() {
                 </label>
                 <Textarea
                   placeholder="Provide background, significance, and properties of this digital asset..."
-                  rows={4}
+                  rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   disabled={isSubmitting}
                 />
               </div>
 
-              {/* Category */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground block">
-                  Category <span className="text-danger">*</span>
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  disabled={isSubmitting}
-                  className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface text-sm text-foreground focus:outline-none focus:border-accent transition-colors cursor-pointer"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c} className="bg-[#15181C] text-foreground">
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               {/* Initial Listing Price (ETH) */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground flex items-center justify-between">
                   <span>Initial Sale Price (ETH)</span>
-                  <span className="text-[11px] text-muted-foreground">Optional (leave blank or 0 for unlisted)</span>
+                  <span className="text-[11px] text-muted-foreground">Optional (leave blank for unlisted)</span>
                 </label>
                 <Input
                   type="number"
@@ -200,93 +327,98 @@ export default function RegisterAssetPage() {
                 />
               </div>
 
-              {/* Image URL / Metadata URI */}
+              {/* Image / Cover Art URL */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground flex items-center justify-between">
-                  <span>Image URL / Metadata URI</span>
-                  <span className="text-[11px] text-muted-foreground">Optional (defaults to algorithmic SVG pattern)</span>
+                  <span>Cover Art / Image URL</span>
+                  <span className="text-[11px] text-muted-foreground">PNG, JPG, SVG, WebP</span>
                 </label>
                 <Input
                   type="url"
-                  placeholder="https://example.com/asset-image.png"
+                  placeholder="https://images.unsplash.com/photo-..."
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                   disabled={isSubmitting}
                 />
               </div>
 
-              {/* Transaction Progress Status Feedback */}
-              {isSignPending && (
-                <div className="p-3.5 rounded-lg bg-accent/10 border border-accent/30 text-accent text-xs flex items-center gap-2.5">
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Waiting for signature confirmation in your wallet...</span>
+              {/* Optional Audio Stream Preview URL (For Music Category) */}
+              {(category === "Music" || audioUrl) && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-accent">
+                      <Music className="w-3.5 h-3.5" /> 30s Audio Stream Preview URL
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">MP3, WAV, AAC stream</span>
+                  </label>
+                  <Input
+                    type="url"
+                    placeholder="https://audio-ssl.itunes.apple.com/..."
+                    value={audioUrl}
+                    onChange={(e) => setAudioUrl(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                  {audioUrl && (
+                    <div className="pt-2">
+                      <AudioPlayer
+                        audioUrl={audioUrl}
+                        trackName={name || "Selected Music Preview"}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
-              {isConfirming && (
-                <div className="p-3.5 rounded-lg bg-teal/10 border border-teal/30 text-teal text-xs flex items-center gap-2.5">
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>
-                    Transaction submitted! Confirming block on Sepolia testnet (~12s)...
-                  </span>
-                </div>
-              )}
-
-              {isConfirmed && (
-                <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>
-                    Asset minted successfully! Opening collection...
-                  </span>
-                </div>
-              )}
-
+              {/* Error Display */}
               {writeError && (
                 <div className="p-3.5 rounded-lg bg-danger/10 border border-danger/30 text-danger text-xs flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>
-                    {formatWeb3ErrorMessage(writeError)}
-                  </span>
+                  <span>{formatWeb3ErrorMessage(writeError)}</span>
                 </div>
               )}
 
-              {/* Submit Button */}
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full font-semibold gap-2"
-                  disabled={isSubmitting || !name.trim()}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Minting on Sepolia...
-                    </>
-                  ) : (
-                    <>
-                      <PlusCircle className="w-4 h-4" />
-                      Mint & Register Asset
-                    </>
-                  )}
-                </Button>
-              </div>
+              {/* Submit Action Button */}
+              <Button
+                type="submit"
+                className="w-full font-semibold py-6 text-sm gap-2"
+                disabled={isSubmitting}
+              >
+                {isSignPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Please Confirm Transaction in Wallet...
+                  </>
+                ) : isConfirming ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Minting & Registering on Sepolia...
+                  </>
+                ) : isConfirmed ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-accent" />
+                    Asset Registered Successfully!
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle className="w-4 h-4" />
+                    Mint ERC-721 Asset on Sepolia
+                  </>
+                )}
+              </Button>
             </form>
           )}
         </div>
 
-        {/* Live Preview Column */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Live Preview
-            </span>
-            <span className="text-[11px] text-muted-foreground">What buyers will see</span>
+        {/* Live Card Preview Column */}
+        <div className="lg:col-span-5 space-y-4 sticky top-24">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span>Live Card Preview</span>
+            <Badge variant="outline" className="text-[10px]">ERC-721</Badge>
           </div>
 
-          <div className="rounded-xl border border-surface-border bg-surface overflow-hidden shadow-xl">
-            <div className="relative aspect-square w-full bg-surface-subtle overflow-hidden">
-              {imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:")) ? (
+          <div className="rounded-xl border border-surface-border bg-surface overflow-hidden shadow-2xl space-y-4 p-5">
+            <div className="aspect-square w-full rounded-lg overflow-hidden bg-surface-subtle relative border border-surface-border flex items-center justify-center">
+              {imageUrl ? (
                 <img
                   src={imageUrl}
                   alt={name || "Preview"}
@@ -296,48 +428,30 @@ export default function RegisterAssetPage() {
                   }}
                 />
               ) : (
-                <AssetPlaceholder
-                  category={category}
-                  name={name || "New Asset"}
-                  assetId="NEW"
-                />
+                <AssetPlaceholder category={category} name={name || "Token Asset"} assetId={1} />
               )}
-
-              <div className="absolute top-3 left-3 flex gap-1.5 z-10">
-                <Badge variant="secondary">{category}</Badge>
-                {priceEth && parseFloat(priceEth) > 0 ? (
-                  <Badge variant="default">For Sale</Badge>
-                ) : (
-                  <Badge variant="muted">Not Listed</Badge>
-                )}
-              </div>
             </div>
 
-            <div className="p-5 space-y-3">
-              <div>
-                <h3 className="font-heading font-bold text-lg text-foreground">
-                  {name || "Untitled Asset"}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
-                  {description || "No description specified yet. Fill out the form on the left to customize."}
-                </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary" className="text-[10px]">
+                  {category}
+                </Badge>
+                <span className="text-xs font-mono font-bold text-accent">
+                  {priceEth && parseFloat(priceEth) > 0 ? `${priceEth} ETH` : "Unlisted"}
+                </span>
               </div>
-
-              <div className="pt-3 border-t border-surface-border flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] text-muted-foreground block">Creator</span>
-                  <span className="text-xs font-mono text-foreground">
-                    {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "0xYou...Connected"}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[11px] text-muted-foreground block">Price</span>
-                  <span className="text-sm font-semibold font-mono text-accent">
-                    {priceEth && parseFloat(priceEth) > 0 ? `${priceEth} ETH` : "—"}
-                  </span>
-                </div>
-              </div>
+              <h3 className="font-heading font-bold text-lg text-foreground truncate">
+                {name || "Untitled Asset"}
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {description || "No description provided."}
+              </p>
             </div>
+
+            {audioUrl && (
+              <AudioPlayer audioUrl={audioUrl} trackName={name || "Music Preview"} />
+            )}
           </div>
         </div>
       </div>

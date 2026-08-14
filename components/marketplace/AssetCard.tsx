@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { AddressBadge } from "@/components/common/AddressBadge";
 import { AssetPlaceholder } from "./AssetPlaceholder";
 import { formatEth, getCategoryBadgeStyle } from "@/lib/utils";
+import { parseMetadataURI } from "@/lib/music";
 import type { Asset } from "@/lib/contract";
-import { Tag, Sparkles } from "lucide-react";
+import { Tag, Sparkles, Music } from "lucide-react";
 
 interface AssetCardProps {
   asset: Asset;
@@ -25,17 +26,27 @@ export function AssetCard({
   onUnlist,
 }: AssetCardProps) {
   const catStyle = getCategoryBadgeStyle(asset.category);
+  const { imageUrl, audioUrl } = parseMetadataURI(asset.metadataURI);
+
+  const hasValidImage = Boolean(
+    imageUrl &&
+      (imageUrl.startsWith("http://") ||
+        imageUrl.startsWith("https://") ||
+        imageUrl.startsWith("data:"))
+  );
 
   return (
     <div className="group relative flex flex-col rounded-lg border border-surface-border bg-surface hover:border-accent/40 transition-all duration-300 overflow-hidden hover:shadow-lg hover:shadow-black/40">
-      <Link href={`/asset/${asset.assetId}`} className="block relative aspect-square w-full bg-surface-subtle overflow-hidden">
-        {asset.metadataURI && (asset.metadataURI.startsWith("http://") || asset.metadataURI.startsWith("https://") || asset.metadataURI.startsWith("data:")) ? (
+      <Link
+        href={`/asset/${asset.assetId}`}
+        className="block relative aspect-square w-full bg-surface-subtle overflow-hidden"
+      >
+        {hasValidImage ? (
           <img
-            src={asset.metadataURI}
+            src={imageUrl}
             alt={asset.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             onError={(e) => {
-              // If image fails, replace with placeholder
               (e.currentTarget as HTMLElement).style.display = "none";
             }}
           />
@@ -48,6 +59,12 @@ export function AssetCard({
           <Badge className={`${catStyle.bg} ${catStyle.text} ${catStyle.border}`}>
             {asset.category || "Asset"}
           </Badge>
+          {audioUrl && (
+            <Badge variant="secondary" className="flex items-center gap-1 text-[10px] bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30">
+              <Music className="w-3 h-3 text-fuchsia-400 animate-pulse" />
+              Audio Sample
+            </Badge>
+          )}
           {asset.forSale ? (
             <Badge variant="default" className="flex items-center gap-1 font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />

@@ -25,6 +25,8 @@ import { AddressBadge } from "@/components/common/AddressBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatEth, formatDate, formatRelativeTime, getCategoryBadgeStyle, formatWeb3ErrorMessage } from "@/lib/utils";
+import { parseMetadataURI } from "@/lib/music";
+import { AudioPlayer } from "@/components/marketplace/AudioPlayer";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -225,6 +227,7 @@ export default function AssetDetailPage() {
   };
 
   const catStyle = getCategoryBadgeStyle(asset.category);
+  const { imageUrl, audioUrl } = parseMetadataURI(asset.metadataURI);
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
@@ -240,15 +243,25 @@ export default function AssetDetailPage() {
 
       {/* Main Asset View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        {/* Left: 3D Asset Preview Component */}
-        <div className="lg:col-span-6 space-y-3">
+        {/* Left: 3D Asset Preview & Audio Player */}
+        <div className="lg:col-span-6 space-y-4">
           <Asset3DViewer
             assetId={asset.assetId}
             name={asset.name}
             category={asset.category}
-            imageUrl={asset.metadataURI}
+            imageUrl={imageUrl}
             isModalOpen={listModalOpen || transferModalOpen}
           />
+
+          {/* Web3 Music Audio Preview Player */}
+          {audioUrl && (
+            <AudioPlayer
+              audioUrl={audioUrl}
+              trackName={asset.name}
+              artistName={asset.creator ? `Minted by Creator` : undefined}
+            />
+          )}
+
           <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
             <span className="flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-teal" />
