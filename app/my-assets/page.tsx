@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useBalance } from "wagmi";
+import { Coins } from "lucide-react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { LumenMarketplaceABI, CONTRACT_ADDRESS, type Asset } from "@/lib/contract";
 import { AssetCard } from "@/components/marketplace/AssetCard";
@@ -27,6 +28,13 @@ export default function MyAssetsPage() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [listModalOpen, setListModalOpen] = useState(false);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
+
+  const { data: balanceData } = useBalance({
+    address,
+    query: {
+      enabled: Boolean(isConnected && address),
+    },
+  });
 
   // Query assets owned by the connected address
   const {
@@ -151,6 +159,47 @@ export default function MyAssetsPage() {
           </Link>
         )}
       </div>
+
+      {/* Connected Wallet Stats Summary */}
+      {isConnected && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl border border-surface-border bg-surface flex items-center justify-between">
+            <div>
+              <span className="text-xs text-muted-foreground block">Wallet Balance</span>
+              <span className="text-lg font-bold font-mono text-accent">
+                {balanceData ? `${parseFloat(balanceData.formatted).toFixed(4)} ETH` : "Loading..."}
+              </span>
+            </div>
+            <div className="p-2 rounded-lg bg-accent/10 text-accent border border-accent/20">
+              <Coins className="w-4 h-4" />
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl border border-surface-border bg-surface flex items-center justify-between">
+            <div>
+              <span className="text-xs text-muted-foreground block">Owned Assets</span>
+              <span className="text-lg font-bold font-mono text-foreground">
+                {ownedAssets.length} {ownedAssets.length === 1 ? "Token" : "Tokens"}
+              </span>
+            </div>
+            <div className="p-2 rounded-lg bg-teal/10 text-teal border border-teal/20">
+              <FolderLock className="w-4 h-4" />
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl border border-surface-border bg-surface flex items-center justify-between">
+            <div>
+              <span className="text-xs text-muted-foreground block">Listed for Sale</span>
+              <span className="text-lg font-bold font-mono text-teal">
+                {ownedAssets.filter((a) => a.forSale).length} Assets
+              </span>
+            </div>
+            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <Tag className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       {!isConnected ? (

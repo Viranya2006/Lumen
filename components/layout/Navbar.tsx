@@ -79,7 +79,10 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           <ConnectButton
             chainStatus="icon"
-            showBalance={false}
+            showBalance={{
+              smallScreen: false,
+              largeScreen: true,
+            }}
             accountStatus={{
               smallScreen: "avatar",
               largeScreen: "full",
