@@ -3,7 +3,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useBalance } from "wagmi";
-import { Coins } from "lucide-react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { LumenMarketplaceABI, CONTRACT_ADDRESS, type Asset } from "@/lib/contract";
 import { AssetCard } from "@/components/marketplace/AssetCard";
@@ -20,6 +19,8 @@ import {
   Tag,
   Send,
   Loader2,
+  Coins,
+  ArrowUpDown,
 } from "lucide-react";
 
 export default function MyAssetsPage() {
@@ -28,6 +29,7 @@ export default function MyAssetsPage() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [listModalOpen, setListModalOpen] = useState(false);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<"oldest" | "recent" | "price-asc" | "price-desc">("oldest");
 
   const { data: balanceData } = useBalance({
     address,
@@ -89,6 +91,22 @@ export default function MyAssetsPage() {
       metadataURI: a.metadataURI || "",
     }));
   }, [rawOwnedAssets]);
+
+  // Sort owned assets (Defaults to oldest/natural order, with Newly Minted option)
+  const sortedOwnedAssets = useMemo(() => {
+    const result = [...ownedAssets];
+    if (sortBy === "recent") {
+      result.sort((a, b) => b.createdAt - a.createdAt || b.assetId - a.assetId);
+    } else if (sortBy === "price-asc") {
+      result.sort((a, b) => (a.price < b.price ? -1 : a.price > b.price ? 1 : 0));
+    } else if (sortBy === "price-desc") {
+      result.sort((a, b) => (a.price > b.price ? -1 : a.price < b.price ? 1 : 0));
+    } else {
+      // "oldest" (First Created / Natural ID order - Default)
+      result.sort((a, b) => a.createdAt - b.createdAt || a.assetId - b.assetId);
+    }
+    return result;
+  }, [ownedAssets, sortBy]);
 
   // Card Quick Actions
   const handleOpenList = (asset: Asset) => {
@@ -223,14 +241,40 @@ export default function MyAssetsPage() {
           <Loader2 className="w-8 h-8 animate-spin text-accent" />
           <p className="text-sm font-medium">Scanning blockchain for your owned tokens...</p>
         </div>
-      ) : ownedAssets.length > 0 ? (
+      ) : sortedOwnedAssets.length > 0 ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Showing {ownedAssets.length} digital {ownedAssets.length === 1 ? "asset" : "assets"}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span>
+              Showing {sortedOwnedAssets.length} digital{" "}
+              {sortedOwnedAssets.length === 1 ? "asset" : "assets"}
+            </span>
+
+            {/* Sorting Controls */}
+            <div className="flex items-center gap-1.5 bg-surface border border-surface-border rounded-md px-3 py-1.5 self-end sm:self-auto shadow-sm">
+              <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-transparent text-foreground focus:outline-none cursor-pointer text-xs"
+              >
+                <option value="oldest" className="bg-[#15181C] text-foreground">
+                  First Created (Default)
+                </option>
+                <option value="recent" className="bg-[#15181C] text-foreground">
+                  Newly Minted
+                </option>
+                <option value="price-asc" className="bg-[#15181C] text-foreground">
+                  Price: Low to High
+                </option>
+                <option value="price-desc" className="bg-[#15181C] text-foreground">
+                  Price: High to Low
+                </option>
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {ownedAssets.map((asset) => (
+            {sortedOwnedAssets.map((asset) => (
               <AssetCard
                 key={asset.assetId}
                 asset={asset}
