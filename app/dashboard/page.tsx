@@ -239,9 +239,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Category Distribution Donut & Top Holders Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
             {/* Category Distribution Donut Chart Column */}
-            <div className="lg:col-span-7 rounded-xl border border-surface-border bg-surface p-6 space-y-6 shadow-xl">
+            <div className="lg:col-span-7 rounded-xl border border-surface-border bg-surface p-6 flex flex-col justify-between space-y-6 shadow-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-heading font-bold text-base text-foreground flex items-center gap-2">
@@ -255,9 +255,9 @@ export default function DashboardPage() {
                 <Badge variant="default" className="text-[11px]">Live Sepolia State</Badge>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center flex-1">
                 {/* Donut Chart with Center Token Count */}
-                <div className="sm:col-span-5 h-56 w-full relative flex items-center justify-center">
+                <div className="sm:col-span-5 h-64 min-h-[220px] w-full relative flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Tooltip content={<CustomPieTooltip />} />
@@ -267,8 +267,8 @@ export default function DashboardPage() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        innerRadius={62}
-                        outerRadius={85}
+                        innerRadius="62%"
+                        outerRadius="86%"
                         paddingAngle={4}
                         cornerRadius={6}
                         stroke="#15181C"
@@ -293,9 +293,9 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Category Breakdown Progress Bars & Legend */}
-                <div className="sm:col-span-7 space-y-3">
+                <div className="sm:col-span-7 space-y-3.5 max-h-64 overflow-y-auto pr-1">
                   {categoryData.map((cat) => (
-                    <div key={cat.name} className="space-y-1">
+                    <div key={cat.name} className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <span
@@ -317,11 +317,11 @@ export default function DashboardPage() {
                       </div>
 
                       {/* Progress bar */}
-                      <div className="w-full h-1.5 rounded-full bg-surface-subtle overflow-hidden">
+                      <div className="w-full h-2 rounded-full bg-surface-subtle overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
-                            width: `${Math.max(5, parseFloat(cat.percentage))}%`,
+                            width: `${Math.max(6, parseFloat(cat.percentage))}%`,
                             backgroundColor: cat.color,
                           }}
                         />
@@ -333,7 +333,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Top 10 Holders Leaderboard */}
-            <div className="lg:col-span-5 rounded-xl border border-surface-border bg-surface p-6 space-y-4 shadow-xl">
+            <div className="lg:col-span-5 rounded-xl border border-surface-border bg-surface p-6 flex flex-col justify-between space-y-4 shadow-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-heading font-bold text-base text-foreground flex items-center gap-2">
