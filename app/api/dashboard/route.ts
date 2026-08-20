@@ -145,7 +145,19 @@ export async function GET() {
     allActivities.sort((a, b) => b.timestamp - a.timestamp);
     const recentActivity = allActivities.slice(0, 10);
 
+    const categoryCount: Record<string, number> = {};
+    rawAssets.forEach((asset) => {
+      const cat = asset.category || "Other";
+      categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+    });
+
     const totalVolumeEth = parseFloat(formatEther(totalVolumeWei)).toFixed(4);
+
+    const categoryDistribution = Object.entries(categoryCount).map(([name, count]) => ({
+      name,
+      count,
+      percentage: totalAssets > 0 ? ((count / totalAssets) * 100).toFixed(1) : "0",
+    }));
 
     return NextResponse.json({
       totalAssets,
@@ -153,6 +165,7 @@ export async function GET() {
       totalUniqueHolders,
       totalVolumeEth,
       topHolders,
+      categoryDistribution,
       recentActivity,
     });
   } catch (error: any) {

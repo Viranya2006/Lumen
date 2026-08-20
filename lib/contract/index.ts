@@ -32,12 +32,19 @@ export interface ActivityEvent {
   txHash?: string;
 }
 
+export interface CategoryStat {
+  name: string;
+  count: number;
+  percentage: string;
+}
+
 export interface DashboardStats {
   totalAssets: number;
   totalTransactions: number;
   totalUniqueHolders: number;
   totalVolumeEth: string;
   topHolders: Array<{ address: string; assetCount: number }>;
+  categoryDistribution?: CategoryStat[];
   recentActivity: ActivityEvent[];
 }
 

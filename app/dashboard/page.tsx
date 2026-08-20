@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { AddressBadge } from "@/components/common/AddressBadge";
 import { Badge } from "@/components/ui/badge";
@@ -20,15 +20,27 @@ import {
   Loader2,
   Sparkles,
   Trophy,
+  PieChart as PieChartIcon,
+  Tag,
 } from "lucide-react";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
+  PieChart,
+  Pie,
+  Cell,
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+
+const CATEGORY_COLORS: Record<string, string> = {
+  art: "#D4A650",
+  collectible: "#2DD4BF",
+  domain: "#818CF8",
+  music: "#E879F9",
+  photography: "#FBBF24",
+  "virtual world": "#34D399",
+  utility: "#94A3B8",
+  other: "#64748B",
+};
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardStats | null>(null);
@@ -57,38 +69,24 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  // Compute chart data from recent activities
-  const chartData = React.useMemo(() => {
-    if (!data || !data.recentActivity || data.recentActivity.length === 0) {
+  // Compute category distribution data for Donut Chart
+  const categoryData = useMemo(() => {
+    if (!data?.categoryDistribution || data.categoryDistribution.length === 0) {
       return [
-        { name: "Day 1", count: 0, volume: 0 },
-        { name: "Day 2", count: 0, volume: 0 },
-        { name: "Day 3", count: 0, volume: 0 },
-        { name: "Today", count: 0, volume: 0 },
+        { name: "Art", count: 1, percentage: "100", color: "#D4A650" },
       ];
     }
 
-    const activityByDate: Record<string, { count: number; volume: number }> = {};
-
-    [...data.recentActivity]
-      .sort((a, b) => a.timestamp - b.timestamp)
-      .forEach((act) => {
-        const d = new Date(act.timestamp * 1000);
-        const dateKey = `${d.getMonth() + 1}/${d.getDate()}`;
-        if (!activityByDate[dateKey]) {
-          activityByDate[dateKey] = { count: 0, volume: 0 };
-        }
-        activityByDate[dateKey].count += 1;
-        if (act.priceEth) {
-          activityByDate[dateKey].volume += parseFloat(act.priceEth);
-        }
-      });
-
-    return Object.entries(activityByDate).map(([date, val]) => ({
-      name: date,
-      count: val.count,
-      volume: parseFloat(val.volume.toFixed(4)),
-    }));
+    return data.categoryDistribution.map((item) => {
+      const key = item.name.toLowerCase();
+      const color = CATEGORY_COLORS[key] || "#D4A650";
+      return {
+        name: item.name,
+        count: item.count,
+        percentage: item.percentage,
+        color,
+      };
+    });
   }, [data]);
 
   return (
@@ -105,7 +103,7 @@ export default function DashboardPage() {
             </h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time on-chain statistics, volume tracking, and holder distributions directly from Sepolia.
+            Real-time on-chain statistics, category distributions, and holder rankings directly from Sepolia.
           </p>
         </div>
 
@@ -209,66 +207,106 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Activity Chart & Top Holders Section */}
+          {/* Category Distribution Donut & Top Holders Section */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Chart Column */}
-            <div className="lg:col-span-7 rounded-xl border border-surface-border bg-surface p-6 space-y-4 shadow-xl">
+            {/* Category Distribution Donut Chart Column */}
+            <div className="lg:col-span-7 rounded-xl border border-surface-border bg-surface p-6 space-y-6 shadow-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-heading font-bold text-base text-foreground flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-accent" />
-                    Activity & Volume Trend
+                    <PieChartIcon className="w-4 h-4 text-accent" />
+                    Asset Category Distribution
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Blockchain transactions and volume settled over time
+                    Breakdown of minted digital assets by category
                   </p>
                 </div>
-                <Badge variant="default" className="text-[11px]">Live Sepolia Data</Badge>
+                <Badge variant="default" className="text-[11px]">Live Sepolia State</Badge>
               </div>
 
-              <div className="h-64 w-full pt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="amberArea" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#D4A650" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#D4A650" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis
-                      dataKey="name"
-                      stroke="#9AA0A6"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#9AA0A6"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      allowDecimals={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#15181C",
-                        borderColor: "#22262B",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                        color: "#F2F3F4",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="count"
-                      name="Events"
-                      stroke="#D4A650"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#amberArea)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                {/* Donut Chart with Center Token Count */}
+                <div className="sm:col-span-5 h-56 w-full relative flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#15181C",
+                          borderColor: "#22262B",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          color: "#F2F3F4",
+                        }}
+                        formatter={(val: any, name: any) => [`${val} tokens`, name]}
+                      />
+                      <Pie
+                        data={categoryData}
+                        dataKey="count"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={62}
+                        outerRadius={85}
+                        paddingAngle={4}
+                        cornerRadius={6}
+                        stroke="#15181C"
+                        strokeWidth={3}
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* Center Donut Label */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                    <span className="text-2xl font-black font-mono text-foreground">
+                      {data?.totalAssets || 0}
+                    </span>
+                    <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
+                      Minted
+                    </span>
+                  </div>
+                </div>
+
+                {/* Category Breakdown Progress Bars & Legend */}
+                <div className="sm:col-span-7 space-y-3">
+                  {categoryData.map((cat) => (
+                    <div key={cat.name} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          <span className="font-semibold text-foreground">
+                            {cat.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="text-muted-foreground text-[11px]">
+                            {cat.count} {cat.count === 1 ? "asset" : "assets"}
+                          </span>
+                          <span className="font-bold text-foreground text-xs">
+                            {cat.percentage}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full h-1.5 rounded-full bg-surface-subtle overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.max(5, parseFloat(cat.percentage))}%`,
+                            backgroundColor: cat.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
